@@ -15,16 +15,22 @@ export type Habit = {
   target?: string;
   category: HabitCategory;
   icon: string;
+  color: string;
   createdAt: string;
+  /** Tanggal selesai dalam format "YYYY-MM-DD". */
   completions: string[];
+  /** Dihitung ulang setiap data dibaca/disimpan. */
+  currentStreak: number;
+  longestStreak: number;
 };
 
 export type HabitPatch = Partial<
-  Pick<Habit, 'name' | 'target' | 'category' | 'icon' | 'completions'>
+  Pick<Habit, 'name' | 'target' | 'category' | 'icon' | 'color' | 'completions'>
 >;
 
 export type DailyProgress = {
   dateKey: string;
+  /** Label hari singkat, contoh "Sen". */
   label: string;
   completed: number;
   total: number;
@@ -40,6 +46,15 @@ export type ProgressSummary = {
 export type StreakStats = {
   current: number;
   best: number;
+};
+
+export type OverallStats = {
+  totalHabits: number;
+  totalCompletions: number;
+  completedToday: number;
+  weeklyAverage: number;
+  currentStreak: number;
+  longestStreak: number;
 };
 
 export type MonthlyStats = {

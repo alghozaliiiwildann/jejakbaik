@@ -5,11 +5,14 @@ import {
   type Habit,
   type HabitPatch,
 } from '../types/habit';
+import { isHexColor } from './colorUtils';
 import { todayKey } from './dateUtils';
+import { withStreakFields } from './habitUtils';
 
 export const HABITS_STORAGE_KEY = 'jejakbaik.habits.v1';
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DEFAULT_COLOR = '#16A34A';
 
 export class StorageError extends Error {
   readonly originalError?: unknown;
@@ -39,12 +42,19 @@ function sanitizeCompletions(value: unknown): string[] {
   return [...uniqueDates];
 }
 
+function readFiniteNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : 0;
+}
+
 function parseHabit(value: unknown): Habit | null {
   if (!isRecord(value)) {
     return null;
   }
 
-  const { id, name, target, category, icon, createdAt, completions } = value;
+  const { id, name, target, category, icon, color, createdAt, completions } =
+    value;
 
   if (typeof id !== 'string' || id.trim().length === 0) {
     return null;
@@ -53,15 +63,22 @@ function parseHabit(value: unknown): Habit | null {
     return null;
   }
 
-  return {
+  const habit: Habit = {
     id,
-    name,
-    target: typeof target === 'string' && target.trim() ? target : undefined,
+    name: name.trim(),
+    target: typeof target === 'string' && target.trim() ? target.trim() : undefined,
     category: isHabitCategory(category) ? category : 'Lainnya',
     icon: typeof icon === 'string' && icon ? icon : 'Leaf',
-    createdAt: typeof createdAt === 'string' ? createdAt : new Date().toISOString(),
+    color: isHexColor(color) ? color : DEFAULT_COLOR,
+    createdAt:
+      typeof createdAt === 'string' ? createdAt : new Date().toISOString(),
     completions: sanitizeCompletions(completions),
+    currentStreak: readFiniteNumber(value.currentStreak),
+    longestStreak: readFiniteNumber(value.longestStreak),
   };
+
+  // Riwayat selalu menjadi sumber kebenaran untuk streak.
+  return withStreakFields(habit);
 }
 
 function parseHabits(raw: string): Habit[] {
@@ -116,8 +133,15 @@ export async function getHabits(): Promise<Habit[]> {
   return readHabits();
 }
 
+export async function getHabitById(id: string): Promise<Habit | null> {
+  const habits = await readHabits();
+  return habits.find((habit) => habit.id === id) ?? null;
+}
+
 export function saveHabits(habits: Habit[]): Promise<void> {
-  return enqueueMutation(() => writeHabits(habits));
+  return enqueueMutation(() =>
+    writeHabits(habits.map((habit) => withStreakFields(habit))),
+  );
 }
 
 export function addHabit(habit: Habit): Promise<void> {
@@ -126,7 +150,7 @@ export function addHabit(habit: Habit): Promise<void> {
     if (habits.some((existing) => existing.id === habit.id)) {
       throw new StorageError('Kebiasaan dengan ID yang sama sudah ada.');
     }
-    await writeHabits([...habits, habit]);
+    await writeHabits([...habits, withStreakFields(habit)]);
   });
 }
 
@@ -140,7 +164,7 @@ export function updateHabit(id: string, patch: HabitPatch): Promise<void> {
         return habit;
       }
       found = true;
-      return {
+      const merged: Habit = {
         ...habit,
         ...patch,
         id: habit.id,
@@ -148,7 +172,9 @@ export function updateHabit(id: string, patch: HabitPatch): Promise<void> {
         completions: patch.completions
           ? sanitizeCompletions(patch.completions)
           : habit.completions,
+        color: patch.color && isHexColor(patch.color) ? patch.color : habit.color,
       };
+      return withStreakFields(merged);
     });
 
     if (!found) {
@@ -191,7 +217,10 @@ export function toggleCompletionToday(id: string): Promise<void> {
         completions.add(dateKey);
       }
 
-      return { ...habit, completions: [...completions] };
+      return withStreakFields({
+        ...habit,
+        completions: [...completions].sort(),
+      });
     });
 
     if (!found) {

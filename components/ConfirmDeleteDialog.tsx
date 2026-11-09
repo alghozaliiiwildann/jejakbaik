@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { Colors, Radius, Shadow } from '../constants/Colors';
 import { Icons } from '../constants/Icons';
@@ -40,14 +41,15 @@ export default function ConfirmDeleteDialog({
           accessibilityLabel="Tutup dialog"
           onPress={processing ? undefined : onCancel}
         />
-        <View style={styles.card}>
+
+        <Animated.View entering={ZoomIn.duration(220)} style={styles.card}>
           <View style={styles.iconCircle}>
-            <Icons.Trash2 size={30} color={Colors.error} />
+            <Icons.Trash2 size={30} color={Colors.error} strokeWidth={1.9} />
           </View>
           <Text style={styles.title}>Hapus Kebiasaan?</Text>
           <Text style={styles.message}>
-            &quot;{habitName}&quot; akan dihapus permanen beserta riwayatnya.
-            Tindakan ini tidak bisa dibatalkan.
+            &quot;{habitName}&quot; akan dihapus permanen beserta seluruh
+            riwayatnya. Tindakan ini tidak bisa dibatalkan.
           </Text>
 
           <Pressable
@@ -63,9 +65,12 @@ export default function ConfirmDeleteDialog({
             ]}
           >
             {processing ? (
-              <ActivityIndicator color={Colors.white} />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.deleteLabel}>Ya, Hapus</Text>
+              <>
+                <Icons.Trash2 size={17} color="#FFFFFF" />
+                <Text style={styles.deleteLabel}>Ya, Hapus</Text>
+              </>
             )}
           </Pressable>
 
@@ -81,7 +86,7 @@ export default function ConfirmDeleteDialog({
           >
             <Text style={styles.cancelLabel}>Batal</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -93,11 +98,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 22,
   },
   card: {
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 350,
     borderRadius: Radius.card + 4,
     backgroundColor: Colors.card,
     padding: 24,
@@ -105,9 +110,9 @@ const styles = StyleSheet.create({
     ...Shadow.floating,
   },
   iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: Colors.softRed,
     alignItems: 'center',
     justifyContent: 'center',
@@ -121,9 +126,9 @@ const styles = StyleSheet.create({
   },
   message: {
     marginTop: 8,
-    marginBottom: 20,
+    marginBottom: 22,
     fontFamily: Fonts.regular,
-    fontSize: 13,
+    fontSize: 12.5,
     lineHeight: 20,
     color: Colors.textSecondary,
     textAlign: 'center',
@@ -133,14 +138,16 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: Radius.button,
     backgroundColor: Colors.error,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     paddingVertical: 12,
   },
   deleteLabel: {
     fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: Colors.white,
+    fontSize: 14.5,
+    color: '#FFFFFF',
   },
   cancelButton: {
     width: '100%',
@@ -149,7 +156,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    paddingVertical: 12,
   },
   cancelPressed: {
     backgroundColor: Colors.background,
@@ -163,6 +169,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   disabled: {
-    opacity: 0.7,
+    opacity: 0.68,
   },
 });

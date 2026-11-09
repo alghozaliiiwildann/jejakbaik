@@ -1,5 +1,7 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,118 +11,88 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
-import CategoryChip from '../../components/CategoryChip';
 import ConfirmDeleteDialog from '../../components/ConfirmDeleteDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
-import PrimaryButton from '../../components/PrimaryButton';
+import HabitGlyph from '../../components/HabitGlyph';
+import HeatmapCalendar from '../../components/HeatmapCalendar';
+import GradientButton from '../../components/ui/GradientButton';
+import GlassCard from '../../components/ui/GlassCard';
 import { Colors, Radius, Shadow } from '../../constants/Colors';
-import { getHabitIcon, Icons } from '../../constants/Icons';
+import { Icons } from '../../constants/Icons';
 import { Fonts } from '../../constants/Typography';
+import { useHabitDetail } from '../../hooks/useHabits';
 import {
-  formatFullDateId,
-  getDayOfMonth,
-  getLastDateKeys,
-  getShortDayName,
-  todayKey,
-} from '../../services/dateUtils';
-import { deleteHabit, getHabits, toggleCompletionToday } from '../../services/storage';
-import type { Habit } from '../../types/habit';
+  successFeedback,
+  tapFeedback,
+  warningFeedback,
+} from '../../hooks/useHaptics';
+import { formatFullDateId, todayKey } from '../../services/dateUtils';
+import { darken, withAlpha } from '../../services/colorUtils';
+import {
+  getHabitTotalCompletions,
+  getHeatmapData,
+} from '../../services/habitUtils';
 
-type ScreenStatus = 'loading' | 'found' | 'not-found' | 'error';
+type DetailStatProps = {
+  label: string;
+  value: number;
+  tint: string;
+};
 
-type FetchResult =
-  | { status: 'found'; habit: Habit }
-  | { status: 'not-found' }
-  | { status: 'error' };
-
-async function fetchHabit(habitId: string): Promise<FetchResult> {
-  try {
-    const habits = await getHabits();
-    const found = habits.find((habit) => habit.id === habitId);
-    return found ? { status: 'found', habit: found } : { status: 'not-found' };
-  } catch {
-    return { status: 'error' };
-  }
+function DetailStat({ label, value, tint }: DetailStatProps) {
+  return (
+    <View style={styles.statCard}>
+      <Text style={[styles.statValue, { color: tint }]}>{value}</Text>
+      <Text style={styles.statLabel} numberOfLines={2}>
+        {label}
+      </Text>
+    </View>
+  );
 }
 
 export default function HabitDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string }>();
-  const habitId = params.id ?? '';
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const habitId = Array.isArray(params.id) ? params.id[0] : (params.id ?? '');
 
-  const [habit, setHabit] = useState<Habit | null>(null);
-  const [status, setStatus] = useState<ScreenStatus>('loading');
+  const { habit, status, reload, toggleToday, remove } =
+    useHabitDetail(habitId);
+
   const [isToggling, setIsToggling] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const loadHabit = useCallback(async () => {
-    if (!habitId) {
-      setStatus('not-found');
-      return;
-    }
-
-    setStatus('loading');
-    const result = await fetchHabit(habitId);
-    if (result.status === 'found') {
-      setHabit(result.habit);
-      setStatus('found');
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
     } else {
-      setHabit(null);
-      setStatus(result.status);
+      router.replace('/(tabs)/home');
     }
-  }, [habitId]);
+  };
 
-  useFocusEffect(
-    useCallback(() => {
-      let isActive = true;
-
-      if (!habitId) {
-        setStatus('not-found');
-        return () => {
-          isActive = false;
-        };
-      }
-
-      setStatus('loading');
-      void fetchHabit(habitId).then((result) => {
-        if (!isActive) {
-          return;
-        }
-        if (result.status === 'found') {
-          setHabit(result.habit);
-          setStatus('found');
-        } else {
-          setHabit(null);
-          setStatus(result.status);
-        }
-      });
-
-      return () => {
-        isActive = false;
-      };
-    }, [habitId]),
-  );
-
-  const handleToggleToday = async () => {
+  const handleToggle = async () => {
     if (!habit || isToggling) {
       return;
     }
 
+    const wasCompleted = habit.completions.includes(todayKey());
+
+    if (wasCompleted) {
+      tapFeedback();
+    } else {
+      successFeedback();
+    }
+
     setIsToggling(true);
     try {
-      await toggleCompletionToday(habit.id);
-      const updatedHabits = await getHabits();
-      const updated = updatedHabits.find((item) => item.id === habit.id);
-      if (updated) {
-        setHabit(updated);
-      } else {
-        setHabit(null);
-        setStatus('not-found');
-      }
+      await toggleToday();
     } catch {
       Alert.alert(
         'Gagal memperbarui',
@@ -138,9 +110,10 @@ export default function HabitDetailScreen() {
 
     setIsDeleting(true);
     try {
-      await deleteHabit(habit.id);
+      await remove();
+      successFeedback();
       setIsConfirmOpen(false);
-      router.back();
+      goBack();
     } catch {
       setIsDeleting(false);
       setIsConfirmOpen(false);
@@ -151,143 +124,254 @@ export default function HabitDetailScreen() {
     }
   };
 
-  const today = todayKey();
-  const isCompleted = habit ? habit.completions.includes(today) : false;
-  const lastSevenDays = getLastDateKeys(7);
-  const HabitIcon = getHabitIcon(habit?.icon ?? 'Leaf');
+  const simpleHeader = (
+    <View style={styles.simpleHeader}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Kembali"
+        hitSlop={8}
+        onPress={goBack}
+        style={({ pressed }) => [
+          styles.backButton,
+          pressed ? styles.pressed : null,
+        ]}
+      >
+        <Icons.ArrowLeft size={20} color={Colors.text} strokeWidth={2.2} />
+      </Pressable>
+      <Text style={styles.simpleTitle}>Detail Kebiasaan</Text>
+      <View style={styles.headerSpacer} />
+    </View>
+  );
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.headerRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Kembali"
-          hitSlop={8}
-          onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.backButton,
-            pressed ? styles.pressed : null,
-          ]}
-        >
-          <Icons.ArrowLeft size={20} color={Colors.primary} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Detail Kebiasaan</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {status === 'loading' ? (
+  if (status === 'loading') {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <StatusBar style="dark" />
+        {simpleHeader}
         <View style={styles.loadingState}>
           <ActivityIndicator color={Colors.primary} />
           <Text style={styles.loadingText}>Memuat kebiasaan...</Text>
         </View>
-      ) : status === 'error' ? (
+      </SafeAreaView>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <StatusBar style="dark" />
+        {simpleHeader}
         <ErrorState
           onRetry={() => {
-            void loadHabit();
+            void reload();
           }}
         />
-      ) : habit ? (
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
+      </SafeAreaView>
+    );
+  }
+
+  if (status === 'not-found' || !habit) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <StatusBar style="dark" />
+        {simpleHeader}
+        <EmptyState
+          title="Kebiasaan tidak ditemukan"
+          description="Kebiasaan ini mungkin sudah dihapus atau tidak tersedia lagi."
+          actionLabel="Kembali"
+          onAction={goBack}
+          icon={Icons.Leaf}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const accent = habit.color || Colors.primary;
+  const today = todayKey();
+  const isCompleted = habit.completions.includes(today);
+  const totalCompletions = getHabitTotalCompletions(habit);
+  const heatmapData = getHeatmapData([habit], 30);
+  const actionColors: readonly [string, string] = isCompleted
+    ? [Colors.primary, Colors.primaryLight]
+    : [accent, darken(accent, 0.24)];
+
+  const createdDate = new Date(habit.createdAt);
+  const createdLabel = Number.isNaN(createdDate.getTime())
+    ? 'Tanggal tidak diketahui'
+    : formatFullDateId(createdDate);
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <StatusBar style="light" />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <LinearGradient
+          colors={[accent, darken(accent, 0.34)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + 8 }]}
         >
+          <View style={styles.headerOrbLarge} pointerEvents="none" />
+          <View style={styles.headerOrbSmall} pointerEvents="none" />
+
+          <View style={styles.headerTopRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Kembali"
+              hitSlop={8}
+              onPress={goBack}
+              style={({ pressed }) => [
+                styles.glassButton,
+                pressed ? styles.pressed : null,
+              ]}
+            >
+              <Icons.ArrowLeft size={20} color="#FFFFFF" strokeWidth={2.2} />
+            </Pressable>
+
+            <GlassCard tone="dark" style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>DETAIL KEBIASAAN</Text>
+            </GlassCard>
+
+            <View style={styles.headerSpacer} />
+          </View>
+
           <View style={styles.hero}>
             <View style={styles.iconCircle}>
-              <HabitIcon size={44} color={Colors.primary} />
+              <HabitGlyph
+                name={habit.icon}
+                size={42}
+                color="#FFFFFF"
+                strokeWidth={1.8}
+              />
             </View>
+
             <Text style={styles.name}>{habit.name}</Text>
             {habit.target ? (
               <Text style={styles.target}>Target: {habit.target}</Text>
             ) : null}
-            <CategoryChip category={habit.category} style={styles.chip} />
-          </View>
 
-          <PrimaryButton
-            label={isCompleted ? 'Sudah selesai' : 'Selesai hari ini'}
-            variant={isCompleted ? 'success' : 'primary'}
-            icon={
-              <Icons.CheckCircle2
-                size={18}
-                color={isCompleted ? Colors.success : Colors.white}
-              />
-            }
+            <View style={styles.headerPills}>
+              <GlassCard tone="dark" style={styles.pill}>
+                <Text style={styles.pillText}>{habit.category}</Text>
+              </GlassCard>
+              {habit.currentStreak > 0 ? (
+                <GlassCard tone="dark" style={styles.pill}>
+                  <Icons.Flame size={12} color="#FDBA74" fill="#FB923C" />
+                  <Text style={styles.pillText}>
+                    {habit.currentStreak} hari beruntun
+                  </Text>
+                </GlassCard>
+              ) : null}
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.body}>
+          <GradientButton
+            label={isCompleted ? 'Sudah selesai hari ini' : 'Selesai hari ini'}
             onPress={() => {
-              void handleToggleToday();
+              void handleToggle();
             }}
+            icon={isCompleted ? Icons.CircleCheck : Icons.Check}
             loading={isToggling}
             disabled={isToggling}
+            colors={actionColors}
+            large
           />
-          <Text style={styles.todayLabel}>{formatFullDateId()}</Text>
+          <Text style={styles.actionHint}>
+            {isCompleted
+              ? 'Tekan lagi untuk membatalkan tanda selesai.'
+              : formatFullDateId()}
+          </Text>
 
-          <View style={styles.historyCard}>
-            <Text style={styles.sectionTitle}>Riwayat</Text>
-            <View style={styles.historyRow}>
-              {lastSevenDays.map((dateKey) => {
-                const done = habit.completions.includes(dateKey);
+          <View style={styles.statsRow}>
+            <DetailStat
+              label="Streak Saat Ini"
+              value={habit.currentStreak}
+              tint={Colors.streakFire}
+            />
+            <DetailStat
+              label="Streak Terpanjang"
+              value={habit.longestStreak}
+              tint="#F59E0B"
+            />
+            <DetailStat
+              label="Total Selesai"
+              value={totalCompletions}
+              tint={accent}
+            />
+          </View>
 
-                return (
-                  <View key={dateKey} style={styles.historyItem}>
-                    <Text style={styles.historyDay}>
-                      {getShortDayName(dateKey)}
-                    </Text>
-                    <View
-                      style={[
-                        styles.historyCircle,
-                        done
-                          ? styles.historyCircleDone
-                          : styles.historyCirclePending,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.historyDate,
-                          done ? styles.historyDateDone : null,
-                        ]}
-                      >
-                        {getDayOfMonth(dateKey)}
-                      </Text>
-                      {done ? (
-                        <View style={styles.historyBadge}>
-                          <Icons.Check
-                            size={9}
-                            color={Colors.primary}
-                            strokeWidth={3}
-                          />
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                );
-              })}
+          <View style={styles.card}>
+            <View style={styles.cardHead}>
+              <View style={styles.cardTitleWrap}>
+                <Text style={styles.cardTitle}>30 Hari Terakhir</Text>
+                <Text style={styles.cardSubtitle}>
+                  Perjalanan konsistensimu
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.countBadge,
+                  { backgroundColor: withAlpha(accent, 0.1) },
+                ]}
+              >
+                <Text style={[styles.countBadgeText, { color: accent }]}>
+                  {totalCompletions} selesai
+                </Text>
+              </View>
+            </View>
+            <HeatmapCalendar data={heatmapData} accent={accent} />
+          </View>
+
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIcon}>
+                <Icons.Target size={17} color={Colors.primary} />
+              </View>
+              <View style={styles.infoTextWrap}>
+                <Text style={styles.infoLabel}>Target</Text>
+                <Text style={styles.infoValue}>
+                  {habit.target || 'Belum ada target khusus'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <View style={styles.infoIcon}>
+                <Icons.CalendarDays size={17} color={Colors.primary} />
+              </View>
+              <View style={styles.infoTextWrap}>
+                <Text style={styles.infoLabel}>Dibuat sejak</Text>
+                <Text style={styles.infoValue}>{createdLabel}</Text>
+              </View>
             </View>
           </View>
 
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Hapus kebiasaan"
-            onPress={() => setIsConfirmOpen(true)}
+            onPress={() => {
+              warningFeedback();
+              setIsConfirmOpen(true);
+            }}
             style={({ pressed }) => [
               styles.deleteButton,
-              pressed ? styles.pressed : null,
+              pressed ? styles.deletePressed : null,
             ]}
           >
-            <Icons.Trash2 size={18} color={Colors.error} />
+            <Icons.Trash2 size={18} color={Colors.error} strokeWidth={2} />
             <Text style={styles.deleteText}>Hapus Kebiasaan</Text>
           </Pressable>
-        </ScrollView>
-      ) : (
-        <EmptyState
-          title="Kebiasaan tidak ditemukan"
-          description="Kebiasaan ini mungkin sudah dihapus atau tidak tersedia lagi."
-          actionLabel="Kembali"
-          onAction={() => router.back()}
-          icon={Icons.Leaf}
-        />
-      )}
+        </View>
+      </ScrollView>
 
       <ConfirmDeleteDialog
-        visible={isConfirmOpen && habit !== null}
-        habitName={habit?.name ?? ''}
+        visible={isConfirmOpen}
+        habitName={habit.name}
         processing={isDeleting}
         onCancel={() => setIsConfirmOpen(false)}
         onConfirm={() => {
@@ -303,7 +387,261 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerRow: {
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  header: {
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    overflow: 'hidden',
+  },
+  headerOrbLarge: {
+    position: 'absolute',
+    top: -80,
+    right: -50,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  headerOrbSmall: {
+    position: 'absolute',
+    bottom: -60,
+    left: -40,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  glassButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBadge: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  headerBadgeText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 8.5,
+    letterSpacing: 0.9,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  headerSpacer: {
+    width: 42,
+    height: 42,
+  },
+  hero: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  iconCircle: {
+    width: 92,
+    height: 92,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.30)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  name: {
+    marginTop: 14,
+    fontFamily: Fonts.bold,
+    fontSize: 23,
+    letterSpacing: -0.4,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  target: {
+    marginTop: 3,
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.78)',
+    textAlign: 'center',
+  },
+  headerPills: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  pill: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  pillText: {
+    fontFamily: Fonts.medium,
+    fontSize: 9.5,
+    color: '#FFFFFF',
+  },
+  body: {
+    paddingHorizontal: 20,
+    paddingTop: 22,
+  },
+  actionHint: {
+    marginTop: 10,
+    fontFamily: Fonts.regular,
+    fontSize: 10.5,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 9,
+    marginTop: 22,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.card,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.85)',
+    ...Shadow.soft,
+  },
+  statValue: {
+    fontFamily: Fonts.bold,
+    fontSize: 21,
+    lineHeight: 25,
+  },
+  statLabel: {
+    marginTop: 2,
+    fontFamily: Fonts.regular,
+    fontSize: 9.5,
+    lineHeight: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  card: {
+    marginTop: 22,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.card,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.85)',
+    ...Shadow.card,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  cardTitleWrap: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  cardTitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14.5,
+    color: Colors.text,
+  },
+  cardSubtitle: {
+    marginTop: 2,
+    fontFamily: Fonts.regular,
+    fontSize: 10,
+    color: Colors.textSecondary,
+  },
+  countBadge: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  countBadgeText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 9.5,
+  },
+  infoCard: {
+    marginTop: 18,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.card,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.85)',
+    ...Shadow.soft,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  infoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoTextWrap: {
+    flex: 1,
+    marginLeft: 11,
+  },
+  infoLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: 10,
+    color: Colors.textSecondary,
+  },
+  infoValue: {
+    marginTop: 1,
+    fontFamily: Fonts.medium,
+    fontSize: 12,
+    color: Colors.text,
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+  },
+  deleteButton: {
+    marginTop: 20,
+    minHeight: 50,
+    borderRadius: Radius.button,
+    backgroundColor: Colors.softRed,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.18)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  deletePressed: {
+    opacity: 0.85,
+  },
+  deleteText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: Colors.error,
+  },
+  simpleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -313,20 +651,18 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 15,
     backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadow.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.soft,
   },
-  headerTitle: {
+  simpleTitle: {
     fontFamily: Fonts.semiBold,
-    fontSize: 18,
+    fontSize: 16.5,
     color: Colors.text,
-  },
-  headerSpacer: {
-    width: 44,
-    height: 44,
   },
   loadingState: {
     flex: 1,
@@ -338,126 +674,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 12,
     color: Colors.textSecondary,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 32,
-  },
-  hero: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.softGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  name: {
-    fontFamily: Fonts.bold,
-    fontSize: 22,
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  target: {
-    marginTop: 4,
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  chip: {
-    marginTop: 10,
-    alignSelf: 'center',
-  },
-  todayLabel: {
-    marginTop: 10,
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  historyCard: {
-    marginTop: 24,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.card,
-    padding: 16,
-    ...Shadow.card,
-  },
-  sectionTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: Colors.text,
-    marginBottom: 14,
-  },
-  historyRow: {
-    flexDirection: 'row',
-  },
-  historyItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  historyDay: {
-    marginBottom: 6,
-    fontFamily: Fonts.medium,
-    fontSize: 10,
-    color: Colors.textSecondary,
-  },
-  historyCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyCircleDone: {
-    backgroundColor: Colors.primary,
-  },
-  historyCirclePending: {
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  historyDate: {
-    fontFamily: Fonts.medium,
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  historyDateDone: {
-    color: Colors.white,
-  },
-  historyBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -3,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  deleteButton: {
-    marginTop: 24,
-    minHeight: 52,
-    borderRadius: Radius.button,
-    backgroundColor: Colors.softRed,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-  },
-  deleteText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: Colors.error,
   },
   pressed: {
     opacity: 0.85,

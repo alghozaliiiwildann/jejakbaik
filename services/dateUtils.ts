@@ -33,6 +33,21 @@ const MONTH_NAMES = [
   'Desember',
 ] as const;
 
+const SHORT_MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Mei',
+  'Jun',
+  'Jul',
+  'Agu',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Des',
+] as const;
+
 export function padTwo(value: number): string {
   return value < 10 ? `0${value}` : `${value}`;
 }
@@ -71,6 +86,14 @@ export function parseDateKey(dateKey: string): Date | null {
   return date;
 }
 
+export function addDays(date: Date, amount: number): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + amount,
+  );
+}
+
 export function getLastDateKeys(
   totalDays: number,
   endDate: Date = new Date(),
@@ -91,44 +114,6 @@ export function getLastDateKeys(
   return keys;
 }
 
-export function addDays(date: Date, amount: number): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate() + amount,
-  );
-}
-
-export function formatMonthYearId(date: Date = new Date()): string {
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
-}
-
-export function formatFullDateId(date: Date = new Date()): string {
-  return `${DAY_NAMES[date.getDay()]}, ${date.getDate()} ${
-    MONTH_NAMES[date.getMonth()]
-  } ${date.getFullYear()}`;
-}
-
-export function formatShortDateId(dateKey: string): string {
-  const date = parseDateKey(dateKey);
-  if (!date) {
-    return dateKey;
-  }
-  return `${SHORT_DAY_NAMES[date.getDay()]} ${padTwo(date.getDate())}/${padTwo(
-    date.getMonth() + 1,
-  )}`;
-}
-
-export function getShortDayName(dateKey: string): string {
-  const date = parseDateKey(dateKey);
-  return date ? SHORT_DAY_NAMES[date.getDay()] : '';
-}
-
-export function getDayOfMonth(dateKey: string): string {
-  const date = parseDateKey(dateKey);
-  return date ? `${date.getDate()}` : '';
-}
-
 export function getGreeting(date: Date = new Date()): string {
   const hour = date.getHours();
   if (hour >= 5 && hour < 11) {
@@ -141,4 +126,49 @@ export function getGreeting(date: Date = new Date()): string {
     return 'Selamat sore';
   }
   return 'Selamat malam';
+}
+
+export function formatFullDateId(date: Date = new Date()): string {
+  return `${DAY_NAMES[date.getDay()]}, ${date.getDate()} ${
+    MONTH_NAMES[date.getMonth()]
+  } ${date.getFullYear()}`;
+}
+
+export function formatMonthYearId(date: Date = new Date()): string {
+  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+export function formatMonthShortId(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  return date ? SHORT_MONTH_NAMES[date.getMonth()] : '';
+}
+
+export function formatDayMonthId(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  return date ? `${date.getDate()} ${SHORT_MONTH_NAMES[date.getMonth()]}` : dateKey;
+}
+
+export function formatLongDateId(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  return date ? formatFullDateId(date) : dateKey;
+}
+
+export function getShortDayName(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  return date ? SHORT_DAY_NAMES[date.getDay()] : '';
+}
+
+export function getDayOfMonth(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  return date ? `${date.getDate()}` : '';
+}
+
+/** 0 = Minggu, 1 = Senin, ... */
+export function getWeekdayIndex(dateKey: string): number {
+  const date = parseDateKey(dateKey);
+  return date ? date.getDay() : 0;
+}
+
+export function isFutureDateKey(dateKey: string): boolean {
+  return dateKey > todayKey();
 }

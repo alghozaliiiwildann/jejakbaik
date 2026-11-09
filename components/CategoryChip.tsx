@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Pressable,
   StyleSheet,
@@ -7,7 +8,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { Colors, Radius } from '../constants/Colors';
+import { Colors, Gradients, Radius } from '../constants/Colors';
+import { CATEGORY_ICONS } from '../constants/Icons';
 import { Fonts } from '../constants/Typography';
 import type { HabitCategory } from '../types/habit';
 
@@ -24,10 +26,22 @@ export default function CategoryChip({
   onPress,
   style,
 }: CategoryChipProps) {
+  const IconComponent = CATEGORY_ICONS[category];
+
   const content = (
-    <Text style={[styles.text, selected ? styles.textSelected : null]}>
-      {category}
-    </Text>
+    <>
+      <IconComponent
+        size={13}
+        color={selected ? '#FFFFFF' : Colors.primary}
+        strokeWidth={2.2}
+      />
+      <Text
+        style={[styles.text, selected ? styles.textSelected : null]}
+        numberOfLines={1}
+      >
+        {category}
+      </Text>
+    </>
   );
 
   if (!onPress) {
@@ -35,10 +49,19 @@ export default function CategoryChip({
       <View
         style={[
           styles.chip,
-          selected ? styles.chipSelected : null,
+          styles.staticChip,
+          selected ? styles.selectedChipWrapper : null,
           style,
         ]}
       >
+        {selected ? (
+          <LinearGradient
+            colors={Gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
         {content}
       </View>
     );
@@ -47,17 +70,24 @@ export default function CategoryChip({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={category}
+      accessibilityLabel={`Kategori ${category}`}
       accessibilityState={{ selected }}
-      hitSlop={8}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
-        selected ? styles.chipSelected : null,
+        selected ? styles.selectedChipWrapper : styles.unselectedChip,
         pressed ? styles.pressed : null,
         style,
       ]}
     >
+      {selected ? (
+        <LinearGradient
+          colors={Gradients.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       {content}
     </Pressable>
   );
@@ -65,27 +95,44 @@ export default function CategoryChip({
 
 const styles = StyleSheet.create({
   chip: {
-    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Colors.secondary,
-    backgroundColor: Colors.softGreen,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    overflow: 'hidden',
   },
-  chipSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  staticChip: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  unselectedChip: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  selectedChipWrapper: {
+    borderWidth: 1,
+    borderColor: 'transparent',
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   text: {
     fontFamily: Fonts.medium,
-    fontSize: 11,
-    color: Colors.success,
+    fontSize: 11.5,
+    color: Colors.textSecondary,
   },
   textSelected: {
-    color: Colors.white,
+    color: '#FFFFFF',
+    fontFamily: Fonts.semiBold,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.88,
+    transform: [{ scale: 0.97 }],
   },
 });

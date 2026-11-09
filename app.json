@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "jejakbaik",
     "userInterfaceStyle": "light",
+    "backgroundColor": "#F8FAFC",
     "ios": {
       "supportsTablet": true
     },
@@ -32,7 +33,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#F3F4F6"
+          "backgroundColor": "#F0FDF4"
         }
       ]
     ]
