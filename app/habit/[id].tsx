@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import Confetti from '../../components/Confetti';
 import ConfirmDeleteDialog from '../../components/ConfirmDeleteDialog';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
@@ -32,7 +33,12 @@ import {
   tapFeedback,
   warningFeedback,
 } from '../../hooks/useHaptics';
-import { formatFullDateId, todayKey } from '../../services/dateUtils';
+import {
+  formatFullDateId,
+  formatLongDateId,
+  getLastDateKeys,
+  todayKey,
+} from '../../services/dateUtils';
 import { darken, withAlpha } from '../../services/colorUtils';
 import {
   getHabitTotalCompletions,
@@ -68,6 +74,28 @@ export default function HabitDetailScreen() {
   const [isToggling, setIsToggling] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (confettiTimer.current) {
+        clearTimeout(confettiTimer.current);
+      }
+    },
+    [],
+  );
+
+  const celebrate = () => {
+    if (confettiTimer.current) {
+      clearTimeout(confettiTimer.current);
+    }
+    setShowConfetti(true);
+    confettiTimer.current = setTimeout(() => {
+      setShowConfetti(false);
+      confettiTimer.current = null;
+    }, 2200);
+  };
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -93,6 +121,9 @@ export default function HabitDetailScreen() {
     setIsToggling(true);
     try {
       await toggleToday();
+      if (!wasCompleted) {
+        celebrate();
+      }
     } catch {
       Alert.alert(
         'Gagal memperbarui',
@@ -191,6 +222,7 @@ export default function HabitDetailScreen() {
   const isCompleted = habit.completions.includes(today);
   const totalCompletions = getHabitTotalCompletions(habit);
   const heatmapData = getHeatmapData([habit], 30);
+  const historyDates = getLastDateKeys(7).reverse();
   const actionColors: readonly [string, string] = isCompleted
     ? [Colors.primary, Colors.primaryLight]
     : [accent, darken(accent, 0.24)];
@@ -327,6 +359,59 @@ export default function HabitDetailScreen() {
             <HeatmapCalendar data={heatmapData} accent={accent} />
           </View>
 
+          <View style={styles.card}>
+            <View style={styles.cardHead}>
+              <View style={styles.cardTitleWrap}>
+                <Text style={styles.cardTitle}>Riwayat 7 Hari</Text>
+                <Text style={styles.cardSubtitle}>
+                  Tanda centang berarti selesai
+                </Text>
+              </View>
+            </View>
+            {historyDates.map((dateKey, index) => {
+              const done = habit.completions.includes(dateKey);
+              return (
+                <View
+                  key={dateKey}
+                  style={[
+                    styles.historyRow,
+                    index === historyDates.length - 1
+                      ? styles.historyRowLast
+                      : null,
+                  ]}
+                >
+                  <Text style={styles.historyDate}>
+                    {formatLongDateId(dateKey)}
+                  </Text>
+                  <View
+                    style={[
+                      styles.historyIcon,
+                      {
+                        backgroundColor: done
+                          ? withAlpha(accent, 0.14)
+                          : '#F1F5F9',
+                      },
+                    ]}
+                  >
+                    {done ? (
+                      <Icons.Check
+                        size={14}
+                        color={accent}
+                        strokeWidth={2.8}
+                      />
+                    ) : (
+                      <Icons.Minus
+                        size={14}
+                        color={Colors.textSecondary}
+                        strokeWidth={2.6}
+                      />
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <View style={styles.infoIcon}>
@@ -368,6 +453,8 @@ export default function HabitDetailScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <Confetti active={showConfetti} />
 
       <ConfirmDeleteDialog
         visible={isConfirmOpen}
@@ -579,6 +666,31 @@ const styles = StyleSheet.create({
   countBadgeText: {
     fontFamily: Fonts.semiBold,
     fontSize: 9.5,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  historyRowLast: {
+    borderBottomWidth: 0,
+  },
+  historyDate: {
+    flex: 1,
+    paddingRight: 10,
+    fontFamily: Fonts.medium,
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+  },
+  historyIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoCard: {
     marginTop: 18,

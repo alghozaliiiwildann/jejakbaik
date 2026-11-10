@@ -11,6 +11,7 @@ import {
   ChartColumn,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   CircleCheck,
   CircleExclamationPoint,
@@ -30,6 +31,7 @@ import {
   House,
   Layers,
   Leaf,
+  Lock,
   Minus,
   Moon,
   PartyPopper,
@@ -71,6 +73,7 @@ export const Icons = {
   Check,
   CheckCircle2: CircleCheck,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   CircleCheck,
   CircleX,
@@ -90,6 +93,7 @@ export const Icons = {
   Home: House,
   Layers,
   Leaf,
+  Lock,
   Minus,
   Moon,
   MoreHorizontal: Ellipsis,
@@ -129,6 +133,7 @@ export const HABIT_ICON_NAMES = [
   'Brain',
   'Music',
   'Footprints',
+  'Sparkles',
 ] as const;
 
 export type HabitIconName = (typeof HABIT_ICON_NAMES)[number];
@@ -152,7 +157,31 @@ export const HABIT_ICON_OPTIONS: ReadonlyArray<{
   { name: 'Brain', label: 'Fokus' },
   { name: 'Music', label: 'Musik' },
   { name: 'Footprints', label: 'Jalan' },
+  { name: 'Sparkles', label: 'Sparkle' },
 ];
+
+/** Warna latar & stroke tiap ikon sesuai design system. */
+export const HABIT_ICON_THEMES: Record<
+  HabitIconName,
+  { background: string; stroke: string }
+> = {
+  Droplet: { background: '#DBEAFE', stroke: '#2563EB' },
+  Dumbbell: { background: '#FEE2E2', stroke: '#DC2626' },
+  BookOpen: { background: '#FEF3C7', stroke: '#D97706' },
+  Code: { background: '#E0E7FF', stroke: '#4F46E5' },
+  Leaf: { background: '#DCFCE7', stroke: '#16A34A' },
+  Heart: { background: '#FCE7F3', stroke: '#DB2777' },
+  Smile: { background: '#FEF9C3', stroke: '#CA8A04' },
+  Star: { background: '#FFEDD5', stroke: '#EA580C' },
+  Moon: { background: '#E0E7FF', stroke: '#6366F1' },
+  Sunrise: { background: '#FED7AA', stroke: '#F97316' },
+  Coffee: { background: '#E7E5E4', stroke: '#78716C' },
+  Bike: { background: '#CCFBF1', stroke: '#0D9488' },
+  Brain: { background: '#FAE8FF', stroke: '#A21CAF' },
+  Music: { background: '#DDD6FE', stroke: '#7C3AED' },
+  Footprints: { background: '#D1FAE5', stroke: '#059669' },
+  Sparkles: { background: '#FEF3C7', stroke: '#F59E0B' },
+};
 
 export const HABIT_ICON_MAP: Record<HabitIconName, LucideIcon> = {
   Droplet,
@@ -170,6 +199,7 @@ export const HABIT_ICON_MAP: Record<HabitIconName, LucideIcon> = {
   Brain,
   Music: AudioLines,
   Footprints,
+  Sparkles,
 };
 
 export function getHabitIcon(name: string): LucideIcon {
@@ -182,5 +212,15 @@ export const CATEGORY_ICONS: Record<HabitCategory, LucideIcon> = {
   Pendidikan: GraduationCap,
   Hiburan: Gamepad2,
   'Self Care': Sparkles,
-  Lainnya: Layers,
+  Lainnya: Ellipsis,
+};
+
+/** Warna aksen tiap kategori. */
+export const CATEGORY_TINTS: Record<HabitCategory, string> = {
+  Kesehatan: '#16A34A',
+  Produktivitas: '#F59E0B',
+  Pendidikan: '#3B82F6',
+  Hiburan: '#EC4899',
+  'Self Care': '#8B5CF6',
+  Lainnya: '#64748B',
 };

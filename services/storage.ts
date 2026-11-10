@@ -10,6 +10,7 @@ import { todayKey } from './dateUtils';
 import { withStreakFields } from './habitUtils';
 
 export const HABITS_STORAGE_KEY = 'jejakbaik.habits.v1';
+export const CELEBRATION_STORAGE_KEY = 'jejakbaik.celebration.v1';
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_COLOR = '#16A34A';
@@ -196,6 +197,23 @@ export function deleteHabit(id: string): Promise<void> {
 
     await writeHabits(nextHabits);
   });
+}
+
+/** Apakah confetti 100% sudah pernah dimainkan hari ini. */
+export async function hasCelebratedToday(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(CELEBRATION_STORAGE_KEY)) === todayKey();
+  } catch (error) {
+    throw new StorageError('Gagal membaca status perayaan.', error);
+  }
+}
+
+export async function markCelebratedToday(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(CELEBRATION_STORAGE_KEY, todayKey());
+  } catch (error) {
+    throw new StorageError('Gagal menyimpan status perayaan.', error);
+  }
 }
 
 export function toggleCompletionToday(id: string): Promise<void> {

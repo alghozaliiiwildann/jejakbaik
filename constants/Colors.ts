@@ -41,7 +41,7 @@ export const Gradients = {
 export const HABIT_ACCENT_COLORS = [
   '#16A34A',
   '#0D9488',
-  '#0EA5E9',
+  '#3B82F6',
   '#6366F1',
   '#8B5CF6',
   '#EC4899',

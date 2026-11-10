@@ -8,8 +8,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { Colors, Gradients, Radius } from '../constants/Colors';
-import { CATEGORY_ICONS } from '../constants/Icons';
+import { Colors, Radius } from '../constants/Colors';
+import { CATEGORY_ICONS, CATEGORY_TINTS } from '../constants/Icons';
+import { lighten } from '../services/colorUtils';
 import { Fonts } from '../constants/Typography';
 import type { HabitCategory } from '../types/habit';
 
@@ -27,12 +28,17 @@ export default function CategoryChip({
   style,
 }: CategoryChipProps) {
   const IconComponent = CATEGORY_ICONS[category];
+  const tint = CATEGORY_TINTS[category];
+  const selectedColors: readonly [string, string] = [
+    tint,
+    lighten(tint, 0.18),
+  ];
 
   const content = (
     <>
       <IconComponent
         size={13}
-        color={selected ? '#FFFFFF' : Colors.primary}
+        color={selected ? '#FFFFFF' : tint}
         strokeWidth={2.2}
       />
       <Text
@@ -56,7 +62,7 @@ export default function CategoryChip({
       >
         {selected ? (
           <LinearGradient
-            colors={Gradients.primary}
+            colors={selectedColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -82,7 +88,7 @@ export default function CategoryChip({
     >
       {selected ? (
         <LinearGradient
-          colors={Gradients.primary}
+          colors={selectedColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}

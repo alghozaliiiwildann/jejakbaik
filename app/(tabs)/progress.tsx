@@ -2,8 +2,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { LucideIcon } from 'lucide-react-native';
+import { useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +14,10 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AchievementsRow from '../../components/AchievementsRow';
 import BarChart7Days from '../../components/BarChart7Days';
+import DatePickerModal from '../../components/common/DatePickerModal';
+import DayDetailSheet from '../../components/DayDetailSheet';
 import EmptyState from '../../components/EmptyState';
 import ErrorState from '../../components/ErrorState';
 import HeatmapCalendar from '../../components/HeatmapCalendar';
@@ -22,14 +27,25 @@ import { Colors, Gradients, Radius, Shadow } from '../../constants/Colors';
 import { Icons } from '../../constants/Icons';
 import { Fonts } from '../../constants/Typography';
 import { useHabits } from '../../hooks/useHabits';
-import { formatMonthYearId } from '../../services/dateUtils';
+import { selectFeedback } from '../../hooks/useHaptics';
+import { withAlpha } from '../../services/colorUtils';
 import {
+  formatFullDateId,
+  formatMonthYearId,
+  toDateKey,
+} from '../../services/dateUtils';
+import {
+  getAchievements,
+  getAveragePercentage,
   getHeatmapData,
   getLast7DaysProgress,
+  getMonthProgress,
   getOverallStats,
   getWeeklyTrendLabel,
 } from '../../services/habitUtils';
-import { withAlpha } from '../../services/colorUtils';
+import type { DailyProgress } from '../../types/habit';
+
+type Period = 'week' | 'month';
 
 type SectionTitleProps = {
   title: string;
@@ -61,7 +77,13 @@ type StatTileProps = {
   index: number;
 };
 
-function StatTile({ icon: IconComponent, tint, value, label, index }: StatTileProps) {
+function StatTile({
+  icon: IconComponent,
+  tint,
+  value,
+  label,
+  index,
+}: StatTileProps) {
   return (
     <Animated.View
       entering={FadeInDown.delay(120 + index * 70).duration(480)}
@@ -80,22 +102,105 @@ export default function ProgressScreen() {
   const router = useRouter();
   const { habits, isLoading, hasError, reload } = useHabits();
 
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [period, setPeriod] = useState<Period>('week');
+  const [selectedDay, setSelectedDay] = useState<DailyProgress | null>(null);
+
   const stats = getOverallStats(habits);
-  const weekData = getLast7DaysProgress(habits);
-  const heatmapData = getHeatmapData(habits, 30);
+  const weekData = getLast7DaysProgress(habits, selectedDate);
+  const monthData = getMonthProgress(habits, selectedDate);
+  const chartData = period === 'week' ? weekData : monthData;
+  const chartAverage = getAveragePercentage(chartData);
+  const heatmapData = getHeatmapData(habits, 30, selectedDate);
+  const achievements = getAchievements(habits);
+  const unlockedCount = achievements.filter((item) => item.unlocked).length;
   const activeDays = heatmapData.filter((day) => day.completed > 0).length;
+  const isViewingToday = toDateKey(selectedDate) === toDateKey(new Date());
 
   const header = (
-    <View style={styles.headerRow}>
-      <View style={styles.headerText}>
-        <Text style={styles.eyebrow}>LAPORAN</Text>
-        <Text style={styles.title}>Progresmu</Text>
-        <Text style={styles.subtitle}>
-          {formatMonthYearId()} · {getWeeklyTrendLabel(stats.weeklyAverage)}
-        </Text>
+    <View>
+      <View style={styles.headerRow}>
+        <View style={styles.headerText}>
+          <Text style={styles.eyebrow}>LAPORAN</Text>
+          <Text style={styles.title}>Progresmu</Text>
+          <Text style={styles.subtitle}>
+            {formatMonthYearId(selectedDate)} ·{' '}
+            {getWeeklyTrendLabel(stats.weeklyAverage)}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Pilih tanggal laporan"
+          onPress={() => {
+            selectFeedback();
+            setIsCalendarOpen(true);
+          }}
+          style={({ pressed }) => [
+            styles.calendarBadge,
+            pressed ? styles.pressed : null,
+          ]}
+        >
+          <Icons.CalendarDays size={20} color={Colors.primary} strokeWidth={2} />
+        </Pressable>
       </View>
-      <View style={styles.calendarBadge}>
-        <Icons.CalendarDays size={20} color={Colors.primary} strokeWidth={2} />
+
+      {isViewingToday ? null : (
+        <View style={styles.filterRow}>
+          <View style={styles.filterChip}>
+            <Icons.CalendarDays size={12} color={Colors.primaryDark} />
+            <Text style={styles.filterText}>
+              Data hingga {formatFullDateId(selectedDate)}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Kembali ke data hari ini"
+            onPress={() => {
+              selectFeedback();
+              setSelectedDate(new Date());
+            }}
+            style={({ pressed }) => [
+              styles.resetChip,
+              pressed ? styles.pressed : null,
+            ]}
+          >
+            <Text style={styles.resetText}>Hari ini</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <View style={styles.periodToggle}>
+        {(['week', 'month'] as const).map((option) => {
+          const isActive = period === option;
+          return (
+            <Pressable
+              key={option}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={option === 'week' ? 'Minggu' : 'Bulan'}
+              onPress={() => {
+                if (!isActive) {
+                  selectFeedback();
+                  setPeriod(option);
+                }
+              }}
+              style={[
+                styles.periodOption,
+                isActive ? styles.periodOptionActive : null,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.periodText,
+                  isActive ? styles.periodTextActive : null,
+                ]}
+              >
+                {option === 'week' ? 'Minggu' : 'Bulan'}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -140,12 +245,25 @@ export default function ProgressScreen() {
 
             <Animated.View entering={FadeInDown.delay(60).duration(500)}>
               <SectionTitle
-                title="7 Hari Terakhir"
+                title={period === 'week' ? 'Ringkasan 7 Hari' : 'Ringkasan Bulan Ini'}
                 subtitle="Persentase kebiasaan yang selesai tiap hari"
-                hint={`Rata-rata ${stats.weeklyAverage}%`}
+                hint={`Rata-rata ${chartAverage}%`}
               />
               <View style={styles.card}>
-                <BarChart7Days data={weekData} />
+                <BarChart7Days
+                  data={chartData}
+                  showValues={period === 'week'}
+                  onSelectDay={(day) => {
+                    selectFeedback();
+                    setSelectedDay(day);
+                  }}
+                />
+                <View style={styles.chartHintRow}>
+                  <Icons.Sparkles size={12} color={Colors.primary} />
+                  <Text style={styles.chartHintText}>
+                    Tap setiap bar untuk melihat detail hari itu.
+                  </Text>
+                </View>
               </View>
             </Animated.View>
 
@@ -160,7 +278,16 @@ export default function ProgressScreen() {
               </View>
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(140).duration(500)}>
+            <Animated.View entering={FadeInDown.delay(130).duration(500)}>
+              <SectionTitle
+                title="Pencapaian"
+                subtitle="Kumpulkan badge dengan konsistensi"
+                hint={`${unlockedCount}/${achievements.length}`}
+              />
+              <AchievementsRow achievements={achievements} />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(160).duration(500)}>
               <SectionTitle
                 title="Tren Penyelesaian"
                 subtitle="Perjalananmu selama seminggu"
@@ -182,35 +309,35 @@ export default function ProgressScreen() {
             <View style={styles.statsGrid}>
               <StatTile
                 icon={Icons.Layers}
-                tint={Colors.primary}
+                tint="#3B82F6"
                 value={`${stats.totalHabits}`}
                 label="Total Kebiasaan"
                 index={0}
               />
               <StatTile
                 icon={Icons.CheckCircle2}
-                tint="#0EA5E9"
+                tint={Colors.primary}
                 value={`${stats.completedToday}`}
                 label="Selesai Hari Ini"
                 index={1}
               />
               <StatTile
                 icon={Icons.TrendingUp}
-                tint="#8B5CF6"
+                tint="#F59E0B"
                 value={`${stats.weeklyAverage}%`}
                 label="Rata-rata 7 Hari"
                 index={2}
               />
               <StatTile
                 icon={Icons.Trophy}
-                tint="#F59E0B"
+                tint={Colors.streakFire}
                 value={`${stats.longestStreak}`}
                 label="Streak Terpanjang"
                 index={3}
               />
             </View>
 
-            <Animated.View entering={FadeInDown.delay(160).duration(500)}>
+            <Animated.View entering={FadeInDown.delay(190).duration(500)}>
               <LinearGradient
                 colors={Gradients.dark}
                 start={{ x: 0, y: 0 }}
@@ -233,6 +360,23 @@ export default function ProgressScreen() {
           </>
         )}
       </ScrollView>
+
+      <DatePickerModal
+        visible={isCalendarOpen}
+        selectedDate={selectedDate}
+        onClose={() => setIsCalendarOpen(false)}
+        onSelect={(date) => {
+          setSelectedDate(date);
+          setIsCalendarOpen(false);
+        }}
+      />
+
+      <DayDetailSheet
+        visible={selectedDay !== null}
+        day={selectedDay}
+        habits={habits}
+        onClose={() => setSelectedDay(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -252,7 +396,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
   },
   headerText: {
     flex: 1,
@@ -287,6 +430,67 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadow.soft,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 12,
+  },
+  filterChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  filterText: {
+    flexShrink: 1,
+    fontFamily: Fonts.medium,
+    fontSize: 10,
+    color: Colors.primaryDark,
+  },
+  resetChip: {
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  resetText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 10,
+    color: '#FFFFFF',
+  },
+  periodToggle: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: 16,
+    padding: 4,
+    borderRadius: Radius.pill,
+    backgroundColor: '#EEF2F6',
+  },
+  periodOption: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+  },
+  periodOptionActive: {
+    backgroundColor: Colors.card,
+    ...Shadow.soft,
+  },
+  periodText: {
+    fontFamily: Fonts.medium,
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+  },
+  periodTextActive: {
+    fontFamily: Fonts.semiBold,
+    color: Colors.primaryDark,
   },
   sectionHeader: {
     marginTop: 26,
@@ -330,6 +534,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.85)',
     ...Shadow.card,
+  },
+  chartHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  chartHintText: {
+    fontFamily: Fonts.regular,
+    fontSize: 9.5,
+    color: Colors.textSecondary,
   },
   trendFooter: {
     flexDirection: 'row',
@@ -428,5 +646,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

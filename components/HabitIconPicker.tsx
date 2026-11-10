@@ -6,15 +6,18 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { Colors, Radius } from '../constants/Colors';
+import { Radius } from '../constants/Colors';
 import {
   HABIT_ICON_MAP,
   HABIT_ICON_OPTIONS,
+  HABIT_ICON_THEMES,
+  Icons,
   type HabitIconName,
 } from '../constants/Icons';
 import { selectFeedback } from '../hooks/useHaptics';
 
 const GAP = 9;
+const COLUMNS = 4;
 
 type IconOptionProps = {
   name: HabitIconName;
@@ -24,9 +27,16 @@ type IconOptionProps = {
   onSelect: (name: HabitIconName) => void;
 };
 
-function IconOption({ name, label, selected, size, onSelect }: IconOptionProps) {
+function IconOption({
+  name,
+  label,
+  selected,
+  size,
+  onSelect,
+}: IconOptionProps) {
   const IconComponent = HABIT_ICON_MAP[name];
-  const scale = useSharedValue(selected ? 1.06 : 1);
+  const theme = HABIT_ICON_THEMES[name];
+  const scale = useSharedValue(selected ? 1.08 : 1);
 
   useEffect(() => {
     scale.value = withSpring(selected ? 1.08 : 1, {
@@ -51,14 +61,24 @@ function IconOption({ name, label, selected, size, onSelect }: IconOptionProps) 
         }}
         style={[
           styles.option,
-          selected ? styles.optionSelected : styles.optionIdle,
+          {
+            backgroundColor: theme.background,
+            borderColor: selected ? theme.stroke : 'transparent',
+            shadowColor: theme.stroke,
+          },
+          selected ? styles.optionSelected : null,
         ]}
       >
         <IconComponent
           size={22}
-          color={selected ? Colors.primary : Colors.textSecondary}
-          strokeWidth={selected ? 2.4 : 2}
+          color={theme.stroke}
+          strokeWidth={selected ? 2.5 : 2.1}
         />
+        {selected ? (
+          <View style={[styles.checkDot, { backgroundColor: theme.stroke }]}>
+            <Icons.Check size={8} color="#FFFFFF" strokeWidth={3.4} />
+          </View>
+        ) : null}
       </Pressable>
     </Animated.View>
   );
@@ -74,7 +94,7 @@ export default function HabitIconPicker({
   onSelect,
 }: HabitIconPickerProps) {
   const [width, setWidth] = useState(0);
-  const itemSize = width > 0 ? (width - GAP * 4) / 5 : 0;
+  const itemSize = width > 0 ? (width - GAP * (COLUMNS - 1)) / COLUMNS : 0;
 
   return (
     <View
@@ -110,17 +130,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
   },
-  optionIdle: {
-    backgroundColor: Colors.background,
-    borderColor: 'transparent',
-  },
   optionSelected: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.primary,
-    shadowColor: Colors.primary,
+    borderWidth: 3,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.22,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
+  },
+  checkDot: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

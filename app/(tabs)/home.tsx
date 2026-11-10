@@ -30,6 +30,7 @@ import QuickStats from '../../components/QuickStats';
 import GlassCard from '../../components/ui/GlassCard';
 import { Colors, Gradients, Radius, Shadow } from '../../constants/Colors';
 import { Icons } from '../../constants/Icons';
+import { MOTIVATIONAL_QUOTES } from '../../constants/Quotes';
 import { Fonts } from '../../constants/Typography';
 import { useHabits } from '../../hooks/useHabits';
 import { pressFeedback, successFeedback, tapFeedback } from '../../hooks/useHaptics';
@@ -39,6 +40,10 @@ import {
   getTodayProgress,
   getTotalCompletions,
 } from '../../services/habitUtils';
+import {
+  hasCelebratedToday,
+  markCelebratedToday,
+} from '../../services/storage';
 import type { Habit } from '../../types/habit';
 
 const USER_NAME = 'Arief';
@@ -53,6 +58,12 @@ export default function HomeScreen() {
   const { habits, isLoading, hasError, reload, toggleHabit } = useHabits();
 
   const [showConfetti, setShowConfetti] = useState(false);
+  const [quote] = useState(
+    () =>
+      MOTIVATIONAL_QUOTES[
+        Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)
+      ],
+  );
   const confettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const today = todayKey();
@@ -111,7 +122,15 @@ export default function HomeScreen() {
           nextProgress.total > 0 &&
           nextProgress.completed === nextProgress.total
         ) {
-          celebrate();
+          try {
+            const alreadyCelebrated = await hasCelebratedToday();
+            if (!alreadyCelebrated) {
+              celebrate();
+              await markCelebratedToday();
+            }
+          } catch {
+            // Perayaan opsional: kegagalan storage tidak boleh menggagalkan check-in.
+          }
         }
       } catch {
         Alert.alert(
@@ -151,8 +170,13 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{USER_NAME.charAt(0)}</Text>
+            <View style={styles.headerActions}>
+              <View style={styles.bellButton}>
+                <Icons.Bell size={17} color="#FFFFFF" strokeWidth={2} />
+              </View>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{USER_NAME.charAt(0)}</Text>
+              </View>
             </View>
           </View>
 
@@ -263,6 +287,24 @@ export default function HomeScreen() {
             actionLabel="Tambah Kebiasaan"
             onAction={() => router.push('/habit/add')}
           />
+        }
+        ListFooterComponent={
+          <View style={styles.footerWrap}>
+            <LinearGradient
+              colors={['#DCFCE7', '#F0FDF4']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.quoteCard}
+            >
+              <View style={styles.quoteIcon}>
+                <Icons.Sparkles size={17} color={Colors.primary} />
+              </View>
+              <View style={styles.quoteTextWrap}>
+                <Text style={styles.quoteLabel}>QUOTE HARI INI</Text>
+                <Text style={styles.quoteText}>“{quote}”</Text>
+              </View>
+            </LinearGradient>
+          </View>
         }
         renderItem={({ item }) => (
           <View style={styles.itemWrap}>
@@ -385,6 +427,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.78)',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bellButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.26)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatar: {
     width: 46,
     height: 46,
@@ -491,6 +548,43 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 10,
+  },
+  footerWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+  },
+  quoteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: Radius.card,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(22, 163, 74, 0.12)',
+  },
+  quoteIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quoteTextWrap: {
+    flex: 1,
+  },
+  quoteLabel: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 8.5,
+    letterSpacing: 1,
+    color: Colors.primaryDark,
+  },
+  quoteText: {
+    marginTop: 3,
+    fontFamily: Fonts.medium,
+    fontSize: 11.5,
+    lineHeight: 17,
+    color: Colors.text,
   },
   fabWrap: {
     position: 'absolute',

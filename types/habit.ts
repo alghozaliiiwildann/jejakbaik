@@ -57,6 +57,18 @@ export type OverallStats = {
   longestStreak: number;
 };
 
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  /** Nilai yang perlu dicapai. */
+  target: number;
+  /** Progres saat ini, dibatasi sampai `target`. */
+  progress: number;
+  unlocked: boolean;
+  tint: string;
+};
+
 export type MonthlyStats = {
   monthLabel: string;
   averagePercentage: number;

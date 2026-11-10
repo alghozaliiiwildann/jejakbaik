@@ -1,4 +1,6 @@
+import { Colors } from '../constants/Colors';
 import type {
+  Achievement,
   DailyProgress,
   Habit,
   OverallStats,
@@ -111,6 +113,13 @@ export function isCompletedOn(habit: Habit, dateKey: string): boolean {
   return habit.completions.includes(dateKey);
 }
 
+export function getCompletedHabitsForDate(
+  habits: Habit[],
+  dateKey: string,
+): Habit[] {
+  return habits.filter((habit) => habit.completions.includes(dateKey));
+}
+
 export function getCompletedCount(habits: Habit[], dateKey: string): number {
   return habits.reduce(
     (count, habit) => (habit.completions.includes(dateKey) ? count + 1 : count),
@@ -135,8 +144,11 @@ export function getTodayProgress(habits: Habit[]): ProgressSummary {
   };
 }
 
-export function getLast7DaysProgress(habits: Habit[]): DailyProgress[] {
-  return getLastDateKeys(7).map((dateKey) => {
+export function getLast7DaysProgress(
+  habits: Habit[],
+  endDate: Date = new Date(),
+): DailyProgress[] {
+  return getLastDateKeys(7, endDate).map((dateKey) => {
     const date = parseDateKey(dateKey);
     return {
       dateKey,
@@ -148,13 +160,52 @@ export function getLast7DaysProgress(habits: Habit[]): DailyProgress[] {
   });
 }
 
-export function getWeeklyAverage(habits: Habit[]): number {
-  if (habits.length === 0) {
+/** Rata-rata persentase dari sekumpulan hari. */
+export function getAveragePercentage(days: DailyProgress[]): number {
+  if (days.length === 0) {
     return 0;
   }
-  const days = getLast7DaysProgress(habits);
   const total = days.reduce((sum, day) => sum + day.percentage, 0);
   return Math.round(total / days.length);
+}
+
+/** Progres per hari pada bulan dari tanggal acuan sampai tanggal itu. */
+export function getMonthProgress(
+  habits: Habit[],
+  date: Date = new Date(),
+): DailyProgress[] {
+  const now = new Date();
+  const isCurrentMonth =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth();
+  const daysInMonth = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  ).getDate();
+  // Pada bulan berjalan, jangan tampilkan hari setelah tanggal acuan.
+  const lastDay = isCurrentMonth
+    ? Math.min(now.getDate(), date.getDate())
+    : daysInMonth;
+
+  const days: DailyProgress[] = [];
+  for (let day = 1; day <= lastDay; day += 1) {
+    const dateKey = toDateKey(
+      new Date(date.getFullYear(), date.getMonth(), day),
+    );
+    days.push({
+      dateKey,
+      label: `${day}`,
+      completed: getCompletedCount(habits, dateKey),
+      total: habits.length,
+      percentage: getDailyPercentage(habits, dateKey),
+    });
+  }
+  return days;
+}
+
+export function getWeeklyAverage(habits: Habit[]): number {
+  return getAveragePercentage(getLast7DaysProgress(habits));
 }
 
 export function getOverallStreak(habits: Habit[]): StreakStats {
@@ -202,6 +253,61 @@ export function getOverallStats(habits: Habit[]): OverallStats {
   };
 }
 
+export function getAchievements(habits: Habit[]): Achievement[] {
+  const stats = getOverallStats(habits);
+  const hasPerfectDay = getLast7DaysProgress(habits).some(
+    (day) => day.total > 0 && day.percentage === 100,
+  );
+
+  return [
+    {
+      id: 'consistency-7',
+      title: '7 Hari Konsisten',
+      description: 'Capai streak 7 hari berturut-turut',
+      target: 7,
+      progress: Math.min(stats.longestStreak, 7),
+      unlocked: stats.longestStreak >= 7,
+      tint: Colors.primary,
+    },
+    {
+      id: 'streak-10',
+      title: 'Streak 10 Hari',
+      description: 'Jaga streak aktif sampai 10 hari',
+      target: 10,
+      progress: Math.min(stats.currentStreak, 10),
+      unlocked: stats.currentStreak >= 10,
+      tint: Colors.streakFire,
+    },
+    {
+      id: 'streak-30',
+      title: '30 Hari Streak',
+      description: 'Rekor streak mencapai 30 hari',
+      target: 30,
+      progress: Math.min(stats.longestStreak, 30),
+      unlocked: stats.longestStreak >= 30,
+      tint: '#F59E0B',
+    },
+    {
+      id: 'completions-100',
+      title: '100 Completions',
+      description: 'Total 100 kebiasaan selesai',
+      target: 100,
+      progress: Math.min(stats.totalCompletions, 100),
+      unlocked: stats.totalCompletions >= 100,
+      tint: '#8B5CF6',
+    },
+    {
+      id: 'perfect-week',
+      title: 'Hari Sempurna',
+      description: 'Selesaikan semua kebiasaan dalam sehari',
+      target: 1,
+      progress: hasPerfectDay ? 1 : 0,
+      unlocked: hasPerfectDay,
+      tint: '#0EA5E9',
+    },
+  ];
+}
+
 export function getHabitTotalCompletions(habit: Habit): number {
   const today = todayKey();
   return habit.completions.filter(
@@ -209,8 +315,12 @@ export function getHabitTotalCompletions(habit: Habit): number {
   ).length;
 }
 
-export function getHeatmapData(habits: Habit[], totalDays = 30): HeatmapDay[] {
-  return getLastDateKeys(totalDays).map((dateKey) => {
+export function getHeatmapData(
+  habits: Habit[],
+  totalDays = 30,
+  endDate: Date = new Date(),
+): HeatmapDay[] {
+  return getLastDateKeys(totalDays, endDate).map((dateKey) => {
     const completed = getCompletedCount(habits, dateKey);
     const total = habits.length;
     const ratio = total === 0 ? 0 : completed / total;

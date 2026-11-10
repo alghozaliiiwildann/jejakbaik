@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import AnimatedNumber from './common/AnimatedNumber';
 import { Colors, Radius, Shadow } from '../constants/Colors';
 import { Icons } from '../constants/Icons';
 import { Fonts } from '../constants/Typography';
@@ -65,9 +66,10 @@ export default function QuickStats({
             >
               <IconComponent size={18} color={item.tint} strokeWidth={2.2} />
             </View>
-            <Text style={styles.value} numberOfLines={1}>
-              {item.value}
-            </Text>
+            <AnimatedNumber
+              value={item.value}
+              style={styles.value}
+            />
             <Text style={styles.label} numberOfLines={2}>
               {item.label}
             </Text>
