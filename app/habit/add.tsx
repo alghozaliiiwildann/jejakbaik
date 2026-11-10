@@ -261,12 +261,7 @@ export default function AddHabitScreen() {
                 <Text style={styles.sectionLabel}>Pratinjau</Text>
                 <Text style={styles.sectionHint}>Live</Text>
               </View>
-              <LinearGradient
-                colors={['#F0FDF4', '#F8FAFC']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.previewWrap}
-              >
+              <View style={styles.previewWrap}>
                 <View style={styles.previewBadge}>
                   <View
                     style={[styles.previewDot, { backgroundColor: color }]}
@@ -282,7 +277,7 @@ export default function AddHabitScreen() {
                   onToggle={() => undefined}
                   interactive={false}
                 />
-              </LinearGradient>
+              </View>
             </View>
 
             {formError ? (
@@ -450,10 +445,7 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   previewWrap: {
-    borderRadius: Radius.card + 2,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(22, 163, 74, 0.12)',
+    gap: 8,
   },
   previewBadge: {
     flexDirection: 'row',

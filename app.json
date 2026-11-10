@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "jejakbaik",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#F8FAFC",
+    "backgroundColor": "#FFFFFF",
     "ios": {
       "supportsTablet": true
     },
@@ -30,10 +30,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 160,
+          "image": "./assets/images/jejakbaik-splash.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#F0FDF4"
+          "backgroundColor": "#FFFFFF"
         }
       ]
     ]
