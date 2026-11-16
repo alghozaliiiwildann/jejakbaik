@@ -21,6 +21,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../constants/Colors';
 import { Fonts as FontTokens } from '../constants/Typography';
 import AnimatedLoadingDots from '../components/splash/AnimatedLoadingDots';
+import { hasCompletedOnboarding } from '../hooks/useOnboarding';
 import { getHabits } from '../services/storage';
 
 const MIN_SPLASH_MS = 2000;
@@ -139,6 +140,8 @@ export default function SplashRoute() {
       const dataPromise = getHabits()
         .then(() => true)
         .catch(() => false);
+      // Status onboarding dibaca paralel agar splash tidak makin lama.
+      const onboardingPromise = hasCompletedOnboarding().catch(() => true);
       const minimumDelay = delay(MIN_SPLASH_MS);
       const maximumDelay = delay(MAX_SPLASH_MS);
       const guardedData = Promise.race([
@@ -146,13 +149,24 @@ export default function SplashRoute() {
         maximumDelay.then(() => false),
       ]);
 
-      const [dataOk] = await Promise.all([guardedData, minimumDelay]);
+      const [dataOk, hasSeenOnboarding] = await Promise.all([
+        guardedData,
+        onboardingPromise,
+        minimumDelay,
+      ]);
 
       if (!isActive || navigatedRef.current) {
         return;
       }
       navigatedRef.current = true;
-      router.replace(dataOk ? '/(tabs)/home' : '/error');
+
+      if (!dataOk) {
+        router.replace('/error');
+        return;
+      }
+
+      // User baru diarahkan ke onboarding, user lama langsung ke beranda.
+      router.replace(hasSeenOnboarding ? '/(tabs)/home' : '/onboarding');
     };
 
     void load();

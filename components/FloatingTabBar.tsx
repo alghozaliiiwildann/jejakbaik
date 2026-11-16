@@ -23,6 +23,7 @@ type TabMeta = {
 const TAB_META: Record<string, TabMeta> = {
   home: { label: 'Beranda', icon: Icons.Home },
   progress: { label: 'Progres', icon: Icons.BarChart3 },
+  profile: { label: 'Profil', icon: Icons.User },
 };
 
 type TabButtonProps = {

@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.jejakbaik.app",
       "adaptiveIcon": {
         "backgroundColor": "#DCFCE7",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -36,6 +37,16 @@
           "backgroundColor": "#FFFFFF"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "739991ab-99f4-461b-ae99-32492c89fe6b"
+      }
+    }
   }
 }

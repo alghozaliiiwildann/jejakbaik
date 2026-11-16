@@ -1,11 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -33,6 +34,7 @@ import { Icons } from '../../constants/Icons';
 import { MOTIVATIONAL_QUOTES } from '../../constants/Quotes';
 import { Fonts } from '../../constants/Typography';
 import { useHabits } from '../../hooks/useHabits';
+import { useUser } from '../../hooks/useUser';
 import { pressFeedback, successFeedback, tapFeedback } from '../../hooks/useHaptics';
 import { formatFullDateId, getGreeting, todayKey } from '../../services/dateUtils';
 import {
@@ -46,8 +48,6 @@ import {
 } from '../../services/storage';
 import type { Habit } from '../../types/habit';
 
-const USER_NAME = 'Arief';
-
 function ListSeparator() {
   return <View style={styles.separator} />;
 }
@@ -56,6 +56,15 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { habits, isLoading, hasError, reload, toggleHabit } = useHabits();
+  const { user, reload: reloadUser } = useUser();
+
+  useFocusEffect(
+    useCallback(() => {
+      void reloadUser();
+    }, [reloadUser]),
+  );
+
+  const userName = user.name;
 
   const [showConfetti, setShowConfetti] = useState(false);
   const [quote] = useState(
@@ -162,7 +171,7 @@ export default function HomeScreen() {
           <View style={styles.topRow}>
             <View style={styles.greetingWrap}>
               <View style={styles.greetingRow}>
-                <Text style={styles.greeting}>Hai, {USER_NAME}</Text>
+                <Text style={styles.greeting}>Hai, {userName}</Text>
                 <AnimatedWavingHand size={26} />
               </View>
               <Text style={styles.greetingSub}>
@@ -171,12 +180,41 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.headerActions}>
-              <View style={styles.bellButton}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Buka notifikasi"
+                onPress={() => {
+                  tapFeedback();
+                  router.push('/notifications');
+                }}
+                style={({ pressed }) => [
+                  styles.bellButton,
+                  pressed ? styles.headerPressed : null,
+                ]}
+              >
                 <Icons.Bell size={17} color="#FFFFFF" strokeWidth={2} />
-              </View>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{USER_NAME.charAt(0)}</Text>
-              </View>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Buka profil"
+                onPress={() => {
+                  pressFeedback();
+                  router.push('/profile');
+                }}
+                style={({ pressed }) => [
+                  styles.avatar,
+                  pressed ? styles.headerPressed : null,
+                ]}
+              >
+                {user.photoUri ? (
+                  <Image
+                    source={{ uri: user.photoUri }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
+                )}
+              </Pressable>
             </View>
           </View>
 
@@ -456,6 +494,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     fontSize: 18,
     color: '#FFFFFF',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 23,
+  },
+  headerPressed: {
+    opacity: 0.82,
   },
   dateRow: {
     flexDirection: 'row',
