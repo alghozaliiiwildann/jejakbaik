@@ -11,6 +11,7 @@ import Animated, {
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { Colors, Radius, Shadow } from '../constants/Colors';
+import { Icons } from '../constants/Icons';
 import { Fonts } from '../constants/Typography';
 import { withAlpha } from '../services/colorUtils';
 import type { Habit } from '../types/habit';
@@ -73,31 +74,23 @@ export default function HabitCard({
         onPress={onPress}
         onPressIn={() => {
           if (interactive) {
-            scale.set(withSpring(0.982, { damping: 18, stiffness: 260 }));
+            scale.set(withSpring(0.985, { damping: 18, stiffness: 260 }));
           }
         }}
         onPressOut={() => {
           scale.set(withSpring(1, { damping: 16, stiffness: 220 }));
         }}
-        style={[
-          styles.card,
-          completed
-            ? {
-                backgroundColor: withAlpha(accent, 0.055),
-                borderColor: withAlpha(accent, 0.28),
-              }
-            : null,
-        ]}
+        style={[styles.card, completed ? styles.cardCompleted : null]}
       >
         <View
           style={[
             styles.iconWrap,
-            { backgroundColor: withAlpha(accent, 0.13) },
+            { backgroundColor: withAlpha(accent, 0.12) },
           ]}
         >
           <HabitGlyph
             name={habit.icon}
-            size={23}
+            size={22}
             color={accent}
             strokeWidth={2.1}
           />
@@ -118,7 +111,13 @@ export default function HabitCard({
             </Text>
             {habit.currentStreak > 0 ? (
               <View style={styles.streakPill}>
-                <Text style={styles.streakText}>🔥 {habit.currentStreak}</Text>
+                <Icons.Flame
+                  size={9}
+                  color="#C2410C"
+                  fill="#FB923C"
+                  strokeWidth={2}
+                />
+                <Text style={styles.streakText}>{habit.currentStreak}</Text>
               </View>
             ) : null}
           </View>
@@ -128,7 +127,7 @@ export default function HabitCard({
           accessibilityRole="checkbox"
           accessibilityLabel={`Tandai ${habit.name}`}
           accessibilityState={{ checked: completed, disabled: !interactive }}
-          hitSlop={6}
+          hitSlop={8}
           disabled={!interactive}
           onPress={(event) => {
             event.stopPropagation();
@@ -137,21 +136,21 @@ export default function HabitCard({
           style={styles.checkboxHitArea}
         >
           <Animated.View style={animatedCheckboxStyle}>
-            <Svg width={30} height={30} viewBox="0 0 30 30">
+            <Svg width={28} height={28} viewBox="0 0 28 28">
               <Rect
-                x={1.2}
-                y={1.2}
-                width={27.6}
-                height={27.6}
-                rx={9.5}
+                x={1}
+                y={1}
+                width={26}
+                height={26}
+                rx={9}
                 fill={completed ? accent : 'transparent'}
-                stroke={completed ? accent : withAlpha(accent, 0.30)}
+                stroke={completed ? accent : withAlpha(accent, 0.28)}
                 strokeWidth={1.8}
               />
               <AnimatedPath
-                d="M8.6 15.2L12.8 19.4L21.4 10.6"
+                d="M8 14.2L11.9 18.1L20 9.9"
                 stroke="#FFFFFF"
-                strokeWidth={3}
+                strokeWidth={2.8}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
@@ -172,26 +171,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.card,
     borderRadius: Radius.card,
-    padding: 13,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.9)',
     ...Shadow.card,
   },
+  cardCompleted: {
+    backgroundColor: '#F9FDFB',
+    borderColor: 'rgba(22, 163, 74, 0.18)',
+  },
   iconWrap: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
   info: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
-    marginRight: 6,
+    marginRight: 8,
   },
   name: {
     fontFamily: Fonts.semiBold,
     fontSize: 14.5,
+    lineHeight: 20,
+    letterSpacing: -0.1,
     color: Colors.text,
   },
   nameCompleted: {
@@ -200,29 +207,34 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 2,
   },
   meta: {
     flexShrink: 1,
     fontFamily: Fonts.regular,
     fontSize: 11,
+    lineHeight: 15,
     color: Colors.textSecondary,
   },
   streakPill: {
-    marginLeft: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 6,
     borderRadius: Radius.pill,
-    backgroundColor: withAlpha(Colors.streakFire, 0.13),
+    backgroundColor: withAlpha(Colors.streakFire, 0.14),
     paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingVertical: 2,
   },
   streakText: {
     fontFamily: Fonts.semiBold,
     fontSize: 9.5,
+    lineHeight: 12,
     color: '#C2410C',
   },
   checkboxHitArea: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,11 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type DimensionValue,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 
 import { Colors, Radius, Shadow } from '../constants/Colors';
@@ -42,9 +36,6 @@ export default function AchievementsRow({
           achievement.target > 0
             ? Math.min(1, achievement.progress / achievement.target)
             : 0;
-        const progressWidth = `${Math.round(
-          progressRatio * 100,
-        )}%` as DimensionValue;
 
         return (
           <Animated.View
@@ -58,36 +49,47 @@ export default function AchievementsRow({
             }`}
             style={[
               styles.card,
-              achievement.unlocked
-                ? {
-                    borderColor: withAlpha(achievement.tint, 0.3),
-                    backgroundColor: withAlpha(achievement.tint, 0.06),
-                  }
-                : styles.lockedCard,
+              achievement.unlocked ? null : styles.lockedCard,
             ]}
           >
-            <View
-              style={[
-                styles.iconWrap,
-                {
-                  backgroundColor: achievement.unlocked
-                    ? withAlpha(achievement.tint, 0.14)
-                    : '#F1F5F9',
-                },
-              ]}
-            >
-              <IconComponent
-                size={22}
-                color={
-                  achievement.unlocked
-                    ? achievement.tint
-                    : Colors.textSecondary
-                }
-                strokeWidth={2.1}
-              />
-              {achievement.unlocked ? null : (
-                <View style={styles.lockBadge}>
-                  <Icons.Lock size={9} color="#FFFFFF" strokeWidth={2.6} />
+            <View style={styles.topRow}>
+              <View
+                style={[
+                  styles.iconWrap,
+                  {
+                    backgroundColor: achievement.unlocked
+                      ? withAlpha(achievement.tint, 0.13)
+                      : '#EFF3F8',
+                  },
+                ]}
+              >
+                <IconComponent
+                  size={20}
+                  color={
+                    achievement.unlocked
+                      ? achievement.tint
+                      : Colors.textSecondary
+                  }
+                  strokeWidth={2.1}
+                />
+              </View>
+
+              {achievement.unlocked ? (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: withAlpha(achievement.tint, 0.13) },
+                  ]}
+                >
+                  <Icons.Check
+                    size={10}
+                    color={achievement.tint}
+                    strokeWidth={3}
+                  />
+                </View>
+              ) : (
+                <View style={styles.statusBadge}>
+                  <Icons.Lock size={10} color={Colors.placeholder} strokeWidth={2.6} />
                 </View>
               )}
             </View>
@@ -110,24 +112,29 @@ export default function AchievementsRow({
                 style={[
                   styles.progressFill,
                   {
-                    width: progressWidth,
+                    width: `${Math.round(progressRatio * 100)}%`,
                     backgroundColor: achievement.unlocked
                       ? achievement.tint
-                      : Colors.secondary,
+                      : Colors.placeholder,
                   },
                 ]}
               />
             </View>
-            <Text
-              style={[
-                styles.progressText,
-                achievement.unlocked ? { color: achievement.tint } : null,
-              ]}
-            >
-              {achievement.unlocked
-                ? 'Terbuka'
-                : `${achievement.progress}/${achievement.target}`}
-            </Text>
+            <View style={styles.progressRow}>
+              <Text
+                style={[
+                  styles.progressText,
+                  achievement.unlocked ? { color: achievement.tint } : null,
+                ]}
+              >
+                {achievement.unlocked ? 'Terbuka' : 'Terkunci'}
+              </Text>
+              <Text style={styles.progressCount}>
+                {achievement.unlocked
+                  ? 'Selesai'
+                  : `${achievement.progress}/${achievement.target}`}
+              </Text>
+            </View>
           </Animated.View>
         );
       })}
@@ -139,72 +146,86 @@ const styles = StyleSheet.create({
   row: {
     gap: 10,
     paddingRight: 4,
-    paddingBottom: 4,
+    paddingBottom: 6,
   },
   card: {
-    width: 138,
+    width: 152,
     borderRadius: Radius.card,
     backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.85)',
+    borderColor: 'rgba(226, 232, 240, 0.9)',
     padding: 13,
     ...Shadow.soft,
   },
   lockedCard: {
     backgroundColor: '#F8FAFC',
+    borderColor: '#E8EDF3',
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
   },
-  lockBadge: {
-    position: 'absolute',
-    right: -3,
-    bottom: -3,
-    width: 17,
-    height: 17,
-    borderRadius: 9,
-    backgroundColor: Colors.textSecondary,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+  statusBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#EFF3F8',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
+    marginTop: 10,
+    minHeight: 30,
     fontFamily: Fonts.semiBold,
-    fontSize: 11.5,
+    fontSize: 12.5,
     lineHeight: 15,
     color: Colors.text,
   },
   lockedTitle: {
-    color: Colors.textSecondary,
+    color: '#475569',
   },
   description: {
-    marginTop: 3,
+    marginTop: 2,
+    minHeight: 28,
     fontFamily: Fonts.regular,
-    fontSize: 9,
-    lineHeight: 13,
+    fontSize: 9.5,
+    lineHeight: 14,
     color: Colors.textSecondary,
   },
   progressTrack: {
-    height: 5,
+    height: 6,
     borderRadius: 3,
     marginTop: 10,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#EDF1F6',
     overflow: 'hidden',
   },
   progressFill: {
-    height: 5,
+    height: '100%',
     borderRadius: 3,
   },
+  progressRow: {
+    marginTop: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   progressText: {
-    marginTop: 5,
+    fontFamily: Fonts.semiBold,
+    fontSize: 9,
+    letterSpacing: 0.2,
+    color: Colors.textSecondary,
+  },
+  progressCount: {
     fontFamily: Fonts.medium,
     fontSize: 9,
-    color: Colors.textSecondary,
+    color: Colors.placeholder,
   },
 });
