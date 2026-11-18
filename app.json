@@ -2,7 +2,7 @@
   "expo": {
     "name": "JejakBaik",
     "slug": "jejakbaik",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "jejakbaik",
@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.jejakbaik.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#DCFCE7",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,6 +29,14 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Izinkan JejakBaik mengakses galeri untuk foto profil.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {

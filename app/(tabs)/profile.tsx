@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
@@ -344,7 +345,9 @@ export default function ProfileScreen() {
                 <Text style={styles.aboutSubtitle}>Habit tracker harian</Text>
               </View>
               <View style={styles.versionPill}>
-                <Text style={styles.versionText}>v1.0.0</Text>
+                <Text style={styles.versionText}>
+                  v{Constants.expoConfig?.version ?? '1.0.0'}
+                </Text>
               </View>
             </View>
             <Text style={styles.aboutDescription}>
