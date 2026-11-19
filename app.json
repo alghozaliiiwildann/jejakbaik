@@ -2,9 +2,9 @@
   "expo": {
     "name": "JejakBaik",
     "slug": "jejakbaik",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/logo-jejakbaik.png",
     "scheme": "jejakbaik",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FFFFFF",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.jejakbaik.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#DCFCE7",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -40,7 +40,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/jejakbaik-splash.png",
+          "image": "./assets/images/logo-jejakbaik.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
