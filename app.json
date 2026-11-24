@@ -4,7 +4,7 @@
     "slug": "jejakbaik",
     "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/images/logo-jejakbaik.png",
+    "icon": "./assets/icon.png",
     "scheme": "jejakbaik",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FFFFFF",
