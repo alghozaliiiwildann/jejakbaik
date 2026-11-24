@@ -171,10 +171,12 @@ export default function HomeScreen() {
           <View style={styles.topRow}>
             <View style={styles.greetingWrap}>
               <View style={styles.greetingRow}>
-                <Text style={styles.greeting}>Hai, {userName}</Text>
-                <AnimatedWavingHand size={26} />
+                <Text style={styles.greeting} numberOfLines={2}>
+                  Hai, {userName}
+                </Text>
+                <AnimatedWavingHand size={26} style={styles.wavingHand} />
               </View>
-              <Text style={styles.greetingSub}>
+              <Text style={styles.greetingSub} numberOfLines={2}>
                 {getGreeting()}! Siap jadi lebih baik?
               </Text>
             </View>
@@ -446,7 +448,10 @@ const styles = StyleSheet.create({
   },
   greetingWrap: {
     flex: 1,
-    paddingRight: 12,
+    flexShrink: 1,
+    minWidth: 0,
+    marginRight: 12,
+    justifyContent: 'center',
   },
   greetingRow: {
     flexDirection: 'row',
@@ -454,10 +459,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   greeting: {
+    flexShrink: 1,
     fontFamily: Fonts.bold,
     fontSize: 24,
+    lineHeight: 30,
     letterSpacing: -0.4,
     color: '#FFFFFF',
+  },
+  wavingHand: {
+    flexShrink: 0,
+    overflow: 'visible',
   },
   greetingSub: {
     marginTop: 2,
@@ -468,6 +479,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
     gap: 8,
   },
   bellButton: {
@@ -506,6 +518,7 @@ const styles = StyleSheet.create({
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 6,
     marginTop: 12,
   },
